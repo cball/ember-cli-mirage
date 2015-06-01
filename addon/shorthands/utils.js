@@ -41,7 +41,11 @@ export default {
     var body;
 
     if (request && request.requestBody) {
-      body = JSON.parse(request.requestBody);
+      try {
+        body = JSON.parse(request.requestBody);
+      } catch(e) {
+        body = request.requestBody;
+      }
     }
 
     return body;

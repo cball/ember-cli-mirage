@@ -1,43 +1,71 @@
 import Ember from 'ember';
 import ENV from '../config/environment';
-import baseConfig, { testConfig } from '../mirage/config';
+import baseConfig, { developmentConfig, testConfig } from '../mirage/config';
 import Server from 'ember-cli-mirage/server';
 import readModules from 'ember-cli-mirage/utils/read-modules';
 
+let env = ENV.environment;
+let isDevelopment = env === 'development';
+let isTest = env === 'test';
+
 export default {
   name: 'ember-cli-mirage',
-  initialize: function(container, application) {
-    var env = ENV.environment;
+  initialize: function() {
+    let addonConfig = ENV['ember-cli-mirage'];
 
-    if (_shouldUseMirage(env, ENV['ember-cli-mirage'])) {
-      var modulesMap = readModules(ENV.modulePrefix);
-      var hasFactories = !Ember.isEmpty(modulesMap['factories']);
-      var hasDefaultScenario = modulesMap['scenarios'].hasOwnProperty('default');
-      var server = new Server({
+    if (_shouldUseMirage(env, addonConfig)) {
+      let server = new Server({
         environment: env
       });
 
-      server.loadConfig(baseConfig);
-
-      if (env === 'test') {
-        server.loadConfig(testConfig);
-      }
-
-      if (env === 'test' && hasFactories) {
-        server.loadFactories(modulesMap['factories']);
-      } else if (env !== 'test' && hasDefaultScenario && hasFactories) {
-        server.loadFactories(modulesMap['factories']);
-        modulesMap['scenarios']['default'](server);
-      } else {
-        server.db.loadData(modulesMap['fixtures']);
-      }
+      _loadServerConfig(server);
+      _loadServerData(server);
     }
   }
 };
 
+/*
+  Loads the Mirage server config.
+*/
+function _loadServerConfig(server) {
+  server.loadConfig(baseConfig);
+
+  _loadEnvironmentConfig(server);
+}
+
+/*
+  Loads an environment specific Mirage config.
+*/
+function _loadEnvironmentConfig(server) {
+  if (isDevelopment) {
+    server.loadConfig(developmentConfig);
+  } else if (isTest) {
+    server.loadConfig(testConfig);
+  }
+}
+
+/*
+  Loads factories or fixtures as server data depending on the
+  environment.
+*/
+function _loadServerData(server) {
+  let modulesMap = readModules(ENV.modulePrefix);
+  let hasFactories = !Ember.isEmpty(modulesMap['factories']);
+  let hasDefaultScenario = modulesMap['scenarios'].hasOwnProperty('default');
+
+  if (isTest && hasFactories) {
+    server.loadFactories(modulesMap['factories']);
+  } else if (!isTest && hasDefaultScenario && hasFactories) {
+    server.loadFactories(modulesMap['factories']);
+    modulesMap['scenarios']['default'](server);
+  } else {
+    server.db.loadData(modulesMap['fixtures']);
+  }
+}
+
 function _shouldUseMirage(env, addonConfig) {
-  var userDeclaredEnabled = typeof addonConfig.enabled !== 'undefined';
-  var defaultEnabled = _defaultEnabled(env, addonConfig);
+  let userDeclaredEnabled = typeof addonConfig.enabled !== 'undefined';
+  let defaultEnabled = _defaultEnabled(env, addonConfig);
 
   return userDeclaredEnabled ? addonConfig.enabled : defaultEnabled;
 }
@@ -47,8 +75,7 @@ function _shouldUseMirage(env, addonConfig) {
   to initialize Mirage.
 */
 function _defaultEnabled(env, addonConfig) {
-  var usingInDev = env === 'development' && !addonConfig.usingProxy;
-  var usingInTest = env === 'test';
+  let usingInDev = isDevelopment && !addonConfig.usingProxy;
 
-  return usingInDev || usingInTest;
+  return usingInDev || isTest;
 }

@@ -46,6 +46,7 @@ export default {
 
     if (!db[collection]) {
       console.error("Mirage: The route handler for " + request.url + " is trying to insert data into the " + collection + " collection, but that collection doesn't exist. To create it, create an empty fixture file or factory.");
+      return {};
     }
 
     var model = db[collection].insert(attrs);

@@ -59,6 +59,7 @@ export default function(options) {
     path = path[0] === '/' ? path.slice(1) : path;
 
     this.interceptor[verb].call(this.interceptor, this.namespace + '/' + path, function(request) {
+      // if (request.url.match(/validate/)) { return; }
       var response = controller.handle(verb, handler, _this.db, request, code, options);
       var shouldLog = typeof server.logging !== 'undefined' ? server.logging : (environment !== 'test');
 
@@ -95,6 +96,7 @@ export default function(options) {
     };
 
     this.unhandledRequest = function(verb, path) {
+      debugger
       path = decodeURI(path);
       console.error("Mirage: Your Ember app tried to " + verb + " '" + path +
                     "', but there was no route defined to handle this " +
